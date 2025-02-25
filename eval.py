@@ -1,6 +1,11 @@
+import os
 import json
 import numpy as np
 from tqdm import tqdm
+import openai
+import asyncio
+from functools import lru_cache
+from tenacity import retry, stop_after_attempt, wait_random_exponential
 from nltk.translate.bleu_score import sentence_bleu, SmoothingFunction
 from nltk.translate.meteor_score import meteor_score
 from rouge_score import rouge_scorer
@@ -19,21 +24,24 @@ def load_json(file_path):
         return json.load(f)
     
 
-def get_supporter_texts(data):
-    """Extracts supporter texts from dialogue data.
-    
+def get_role_texts(data, role="seeker"):
+    """Extracts role texts from dialogue data.
+
     Args:
         data (dict): Dialogue data containing whole conversations.
-        
+        role (str): The role to extract texts for ("seeker" or "supporter").
+
     Returns:
-        list: List of supporter utterances extracted from every other turn in dialogues.
+        list: List of role utterances extracted from every other turn in dialogues.
     """
-    supporter_texts = []
-    for i, chat_info in data.items():
+    role_texts = []
+    for chat_info in data.values():
         whole_dialogue = chat_info["whole_dialog"]
-        for i in range(0, len(whole_dialogue), 2):
-            supporter_texts.append(whole_dialogue[i].replace("supporter:", ""))   
-    return supporter_texts
+        start_index = 0 if role == "seeker" else 1
+        for i in range(start_index, len(whole_dialogue), 2):
+            role_texts.append(whole_dialogue[i].replace(f"{role}:", ""))   
+    return role_texts
+
 
 
 def distinct_n(texts, n):
@@ -95,7 +103,73 @@ def vector_extrema_similarity(x, y, glove):
     return cos
 
 
-def calculate_metrics(pred_text, ref_text, glove):
+@retry(stop=stop_after_attempt(3), wait=wait_random_exponential(multiplier=1, max=10))
+async def async_chatgpt_query(prompt):
+    """Asynchronous query to OpenAI ChatGPT for evaluation score.
+
+    Args:
+        prompt (str): Prompt text for evaluation.
+    
+    Returns:
+        str: Response from ChatGPT model.
+    """
+    response = await openai.ChatCompletion.acreate(
+        model="gpt-4o",
+        messages=[
+            {"role": "system", "content": "Only return the numerical rating, no explanation."},
+            {"role": "user", "content": prompt}
+        ],
+        max_tokens=5
+    )
+    return response.choices[0].message.content.strip()
+
+
+@lru_cache(maxsize=1000)
+def build_prompt(input_text, reference, generated):
+    """Builds a prompt for evaluation of generated text.
+
+    Args:
+        input_text (str): Input text for the model.
+        reference (str): Reference text for evaluation.
+        generated (str): Generated text for evaluation.
+    
+    Returns:
+        str: Formatted prompt for evaluation
+    """
+    return f"""
+Evaluate the generated response (1-5 scale) considering:
+1. Relevance to input
+2. Match with reference
+3. Fluency and coherence
+
+Input: {input_text}
+Reference: {reference}
+Generated: {generated}
+
+Score (1-5 only):
+"""
+
+
+async def get_chatgpt_score_async(inputs, references, generateds):
+    """Asynchronously queries ChatGPT for evaluation scores.
+
+    Args:
+        inputs (list): List of input texts.
+        references (list): List of reference texts.
+        generateds (list): List of generated texts.
+    Returns:
+        list: List of evaluation scores for each generated text
+    """
+    tasks = []
+    for inp, ref, gen in zip(inputs, references, generateds):
+        prompt = build_prompt(inp, ref, gen)
+        tasks.append(async_chatgpt_query(prompt))
+    
+    raw_scores = await asyncio.gather(*tasks)
+    return [min(max(float(score), 1), 5) / 5 for score in raw_scores]
+
+
+def calculate_metrics(input_text, pred_text, ref_text, glove):
     """Calculates multiple evaluation metrics for text generation.
     
     Args:
@@ -111,6 +185,7 @@ def calculate_metrics(pred_text, ref_text, glove):
             - Vector Extrema
             - Distinct-2
             - Distinct-3
+            - ChatGPT Score
     """
     print("Calculating metrics...")
     metrics = {
@@ -118,7 +193,17 @@ def calculate_metrics(pred_text, ref_text, glove):
         'bleu': 0.0,
         'rouge': 0.0,
         'extrema': 0.0,
+        'g_score': 0.0
     }
+
+    print("Calculating ChatGPT score...")
+    loop = asyncio.get_event_loop()
+    g_scores = loop.run_until_complete(
+        get_chatgpt_score_async(input_text, ref_text, pred_text)  
+    )
+    metrics['g_score'] = np.mean(g_scores)
+
+    print("ChatGPT score calculated. Calculating other metrics...")
     rouge_scorer_obj = rouge_scorer.RougeScorer(['rougeL'], use_stemmer=True)
     smoothie = SmoothingFunction().method1
     for ref, pred in tqdm(zip(ref_text, pred_text), total=len(ref_text), desc="Evaluating"):
@@ -128,6 +213,7 @@ def calculate_metrics(pred_text, ref_text, glove):
         metrics["extrema"] += vector_extrema_similarity(pred, ref, glove)
     metrics["distinct_2"] = distinct_n(pred_text, 2)
     metrics["distinct_3"] = distinct_n(pred_text, 3)
+    print("Metrics calculated.")
 
     for key in ['meteor', 'bleu', 'rouge', 'extrema']:
         metrics[key] /= len(pred_text)
@@ -157,28 +243,30 @@ def main():
     """Main execution function for validation pipeline.
     Loads data, computes metrics, and prints results.
     """
-    # The file val_results.json is expected to follow the same structure as val.json.
-    pred_path = "val_results.json"
-    ref_path = "val.json"
-    pred_data = load_json(pred_path)
-    ref_data = load_json(ref_path)
+    # Set your OpenAI API key here or as an environment variable.
+    os.environ["OPENAI_API_KEY"] = ""
 
-    pred_texts, ref_texts = get_supporter_texts(pred_data), get_supporter_texts(ref_data)
-    assert len(pred_texts) == len(ref_texts), "Number of predictions and references do not match."
+    # The file val_results.json is expected to follow the same structure as val.json.
+    ref_path, pred_path = "val.json", "val_results.json"
+    ref_data, pred_data = load_json(ref_path), load_json(pred_path)
+
+    input_text, ref_text, pred_text = get_role_texts(ref_data, role="seeker"), get_role_texts(ref_data, role="supporter"), get_role_texts(pred_data, role="supporter")
+    assert len(pred_text) == len(ref_text), "Number of predictions and references do not match."
 
     # The file glove.6B.50d.txt can be downloaded from https://nlp.stanford.edu/projects/glove/.
     glove_path = "glove.6B.50d.txt"
     with open(glove_path, 'r', encoding='utf-8') as f:
         glove = f.readlines()
-    metrics = calculate_metrics(pred_texts, ref_texts, glove)
+    metrics = calculate_metrics(input_text, pred_text, ref_text, glove)
 
     weights = {
-        'meteor': 0.15,
-        'bleu': 0.25,
-        'rouge': 0.25,
-        'extrema': 0.15,
+        'meteor': 0.1,
+        'bleu': 0.2,
+        'rouge': 0.2,
+        'extrema': 0.1,
         'distinct_2': 0.1,
         'distinct_3': 0.1,
+        'g_score': 0.2
     }
     total_score = calculate_total_score(metrics, weights)
     
