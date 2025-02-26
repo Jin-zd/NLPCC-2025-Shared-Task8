@@ -53,6 +53,8 @@ Each dialogue instance contains 20 conversational turns along with the Seeker’
 ```
 The test dataset does not contain the supporter's responses.
 
+**In order to ensure the proper handling and protection of student information, the data cannot be used for commercial purposes outside of the competition. For any other academic purposes, please contact the organizers for further discussion.**
+
 
 ## Evaluation
 For evaluation, the automated evaluation metrics we use include **METEOR (ME)**, **BLEU-4 (B-4)**, **ROUGE-L(R-L)**, **VectorExtrema (Ext)**,and **Distinct2/3 (D-2/3)**. GPT4 will evaluate the relevance, fluency, informativeness, and logical coherence of your responses to get a score(**G-Score**). We provide a script, `eval.py`, to compute these metrics and generate a total score for the validation dataset. The total score is calculated as follows:
