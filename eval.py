@@ -2,13 +2,17 @@ import os
 import json
 import numpy as np
 from tqdm import tqdm
-import openai
+from openai import AsyncOpenAI
 import asyncio
 from functools import lru_cache
 from tenacity import retry, stop_after_attempt, wait_random_exponential
 from nltk.translate.bleu_score import sentence_bleu, SmoothingFunction
 from nltk.translate.meteor_score import meteor_score
 from rouge_score import rouge_scorer
+
+# Set your OpenAI API key here or as an environment variable.
+os.environ["OPENAI_API_KEY"] =  ""
+client = AsyncOpenAI()
 
 
 def load_json(file_path):
@@ -113,7 +117,7 @@ async def async_chatgpt_query(prompt):
     Returns:
         str: Response from ChatGPT model.
     """
-    response = await openai.ChatCompletion.acreate(
+    response = await client.chat.completions.create( 
         model="gpt-4o-mini",
         messages=[
             {"role": "system", "content": "Only return the numerical rating, no explanation."},
@@ -196,14 +200,14 @@ def calculate_metrics(input_text, pred_text, ref_text, glove):
         'g_score': 0.0
     }
 
-    print("Calculating ChatGPT score...")
+    print("Calculating GPT4 score...")
     loop = asyncio.get_event_loop()
     g_scores = loop.run_until_complete(
         get_chatgpt_score_async(input_text, ref_text, pred_text)  
     )
     metrics['g_score'] = np.mean(g_scores)
 
-    print("ChatGPT score calculated. Calculating other metrics...")
+    print("GPT4 score calculated. Calculating other metrics...")
     rouge_scorer_obj = rouge_scorer.RougeScorer(['rougeL'], use_stemmer=True)
     smoothie = SmoothingFunction().method1
     for ref, pred in tqdm(zip(ref_text, pred_text), total=len(ref_text), desc="Evaluating"):
@@ -243,8 +247,6 @@ def main():
     """Main execution function for validation pipeline.
     Loads data, computes metrics, and prints results.
     """
-    # Set your OpenAI API key here or as an environment variable.
-    os.environ["OPENAI_API_KEY"] = ""
 
     # The file val_results.json is expected to follow the same structure as val.json.
     ref_path, pred_path = "val.json", "val_results.json"
