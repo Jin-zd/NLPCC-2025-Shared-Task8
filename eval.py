@@ -114,7 +114,7 @@ async def async_chatgpt_query(prompt):
         str: Response from ChatGPT model.
     """
     response = await openai.ChatCompletion.acreate(
-        model="gpt-4o",
+        model="gpt-4o-mini",
         messages=[
             {"role": "system", "content": "Only return the numerical rating, no explanation."},
             {"role": "user", "content": prompt}
