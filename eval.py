@@ -260,13 +260,13 @@ def main():
     metrics = calculate_metrics(input_text, pred_text, ref_text, glove)
 
     weights = {
-        'meteor': 0.1,
+        'meteor': 0.2,
         'bleu': 0.2,
         'rouge': 0.2,
         'extrema': 0.1,
         'distinct_2': 0.1,
         'distinct_3': 0.1,
-        'g_score': 0.2
+        'g_score': 0.1
     }
     total_score = calculate_total_score(metrics, weights)
     

@@ -58,11 +58,11 @@ The test dataset does not contain the supporter's responses.
 
 ## Evaluation
 For evaluation, the automated evaluation metrics we use include **METEOR (ME)**, **BLEU-4 (B-4)**, **ROUGE-L(R-L)**, **VectorExtrema (Ext)**,and **Distinct2/3 (D-2/3)**. GPT4 will evaluate the relevance, fluency, informativeness, and logical coherence of your responses to get a score(**G-Score**). We provide a script, `eval.py`, to compute these metrics and generate a total score for the validation dataset. The total score is calculated as follows:
-$$\text{score} = 0.1 * \text{ME} + 0.2 * \text{B-4} + 0.2 * \text{R-L} + 0.1 * \text{Ext} + 0.1 * \text{D-2} + 0.1 * \text{D-3} +  0.2 * \text{G-Score}$$
+$$\text{score} = 0.2 * \text{ME} + 0.2 * \text{B-4} + 0.2 * \text{R-L} + 0.1 * \text{Ext} + 0.1 * \text{D-2} + 0.1 * \text{D-3} +  0.1 * \text{G-Score}$$
 
 
 ## Submission
-For submission, the following materials should be packaged as one zip file and submit to:
+For submission, the following materials should be packaged as one zip file and submit to <https://f.wps.cn/g/RhyrdzJj>:
 - **Dilogue results**: Your model's output should be filled into the corresponding blank Supporter field in the `test.json` file. The output file should be renamed as `result.json`. 
 - **Code**: All code files related to data processing, model training, model inference, and other related processes.
 - **Description**: Necessary explanatory documents (describing the code structure, how to run the code to get your results, etc.).
