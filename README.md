@@ -55,7 +55,7 @@ The test dataset does not contain the supporter's responses.
 
 
 ## Evaluation
-For evaluation, the automated evaluation metrics we use include **METEOR (ME)**, **BLEU-4 (B-4)**, **ROUGE-L(R-L)**, **VectorExtrema (Ext)**,and **Distinct2/3 (D-2/3)**. ChatGPT4 will evaluate the relevance, fluency, informativeness, and logical coherence of your responses to get a score(**G-Score**). We provide a script, `eval.py`, to compute these metrics and generate a total score for the validation dataset. The total score is calculated as follows:
+For evaluation, the automated evaluation metrics we use include **METEOR (ME)**, **BLEU-4 (B-4)**, **ROUGE-L(R-L)**, **VectorExtrema (Ext)**,and **Distinct2/3 (D-2/3)**. GPT4 will evaluate the relevance, fluency, informativeness, and logical coherence of your responses to get a score(**G-Score**). We provide a script, `eval.py`, to compute these metrics and generate a total score for the validation dataset. The total score is calculated as follows:
 $$\text{score} = 0.1 * \text{ME} + 0.2 * \text{B-4} + 0.2 * \text{R-L} + 0.1 * \text{Ext} + 0.1 * \text{D-2} + 0.1 * \text{D-3} +  0.2 * \text{G-Score}$$
 
 
@@ -66,6 +66,7 @@ For submission, the following materials should be packaged as one zip file and s
 - **Description**: Necessary explanatory documents (describing the code structure, how to run the code to get your results, etc.).
 
 Here is an example of dilogue results:
+
 The `test.json` will be like:
 ```
 {
