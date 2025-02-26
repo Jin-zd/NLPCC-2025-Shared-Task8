@@ -114,6 +114,7 @@ The submission dates are as follows:
 - April 16, 23:59
 - April 18, 23:59
 - April 20, 23:59, **final submission**
+
 For each of these dates, we will select the last submission of the day as the final result for that day, and among multiple submissions across the days, we will choose the best result.
 
 
