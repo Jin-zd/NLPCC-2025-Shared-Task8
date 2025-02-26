@@ -62,7 +62,7 @@ $$\text{score} = 0.1 * \text{ME} + 0.2 * \text{B-4} + 0.2 * \text{R-L} + 0.1 * \
 
 
 ## Submission
-For submission, the following materials should be packaged as one zip file and sent to <220110515@stu.hit.edu.cn>:
+For submission, the following materials should be packaged as one zip file and submit to:
 - **Dilogue results**: Your model's output should be filled into the corresponding blank Supporter field in the `test.json` file. The output file should be renamed as `result.json`. 
 - **Code**: All code files related to data processing, model training, model inference, and other related processes.
 - **Description**: Necessary explanatory documents (describing the code structure, how to run the code to get your results, etc.).
@@ -108,7 +108,13 @@ And then the `result.json` should be like:
 }
 ```
 
-The submission dates are **April 12, 2025**, **April 14, 2025**, **April 16, 2025**, and **April 18, 2025**, with the final submission due on **April 20, 2025**. We will select the best result from the submissions on each specific date, as well as the best result from all the submissions made over the multiple days.
+The submission dates are as follows: 
+- April 12, 23:59
+- April 14, 23:59
+- April 16, 23:59
+- April 18, 23:59
+- April 20, 23:59, **final submission**
+For each of these dates, we will select the last submission of the day as the final result for that day, and among multiple submissions across the days, we will choose the best result.
 
 
 ## Contact
