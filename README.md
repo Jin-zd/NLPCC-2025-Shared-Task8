@@ -106,7 +106,7 @@ And then the `result.json` should be like:
 }
 ```
 
-The submission dates are April 12, 2025, April 14, 2025, April 16, 2025, and April 18, 2025, with the final submission due on April 20, 2025. We will select the best result from the submissions on each specific date, as well as the best result from all the submissions made over the multiple days.
+The submission dates are **April 12, 2025**, **April 14, 2025**, **April 16, 2025**, and **April 18, 2025**, with the final submission due on **April 20, 2025**. We will select the best result from the submissions on each specific date, as well as the best result from all the submissions made over the multiple days.
 
 
 ## Contact
