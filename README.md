@@ -53,11 +53,12 @@ Each dialogue instance contains 20 conversational turns along with the Seeker’
 ```
 The test dataset does not contain the supporter's responses.
 
-**In order to ensure the proper handling and protection of student information, the data cannot be used for commercial purposes outside of the competition. For any other academic purposes, please contact the organizers for further discussion.**
+**In order to ensure the proper handling and protection of personal information, the data cannot be used for commercial purposes outside of the competition. For any other academic purposes, please contact the organizers for further discussion.**
 
 
 ## Evaluation
 For evaluation, the automated evaluation metrics we use include **METEOR (ME)**, **BLEU-4 (B-4)**, **ROUGE-L(R-L)**, **VectorExtrema (Ext)**,and **Distinct2/3 (D-2/3)**. GPT4 will evaluate the relevance, fluency, informativeness, and logical coherence of your responses to get a score(**G-Score**). We provide a script, `eval.py`, to compute these metrics and generate a total score for the validation dataset. The total score is calculated as follows:
+
 $$\text{score} = 0.2 * \text{ME} + 0.2 * \text{B-4} + 0.2 * \text{R-L} + 0.1 * \text{Ext} + 0.1 * \text{D-2} + 0.1 * \text{D-3} +  0.1 * \text{G-Score}$$
 
 
@@ -113,7 +114,7 @@ The submission dates are as follows:
 - April 14, 23:59
 - April 16, 23:59
 - April 18, 23:59
-- April 20, 23:59, **final submission**
+- April 20, 23:59, **Final submission**
 
 For each of these dates, we will select the last submission of the day as the final result for that day, and among multiple submissions across the days, we will choose the best result.
 
