@@ -117,6 +117,7 @@ The submission dates are as follows:
 - April 20, 23:59, **Final submission**
 
 For each of these dates, we will select the last submission of the day as the final result for that day, and among multiple submissions across the days, we will choose the best result.
+We will publish the rankings on GitHub the day after each submission, based on each team's best submission so far, along with the results of their last submission from the previous day.
 
 
 ## Contact
