@@ -25,7 +25,7 @@ We provide a dataset containing 1,500 dialogue instances, divided into training,
 data
 ├── train.json                     # training dataset
 ├── val.json                       # validation dataset
-└── test.json                      # test dataset (will be released on 2025/04/11)
+└── test.json                      # test dataset
 ```
 Each dialogue instance contains 20 conversational turns along with the Seeker’s personal profile, structured as shown below:
 ```
