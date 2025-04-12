@@ -65,7 +65,7 @@ $$\text{score} = 0.2 * \text{ME} + 0.2 * \text{B-4} + 0.2 * \text{R-L} + 0.1 * \
 ## Submission
 For submission, the following materials should be packaged as one zip file and submit to <https://f.wps.cn/g/RhyrdzJj>:
 - **Dilogue results**: Your model's output should be filled into the corresponding blank Supporter field in the `test.json` file. The output file should be renamed as `result.json`. 
-- **Code**: All code files related to data processing, model training, model inference, and other related processes.
+- **Code**: All code files related to data processing, model training, model inference, and other related processes. Model weights do not need to be submitted.
 - **Description**: Necessary explanatory documents (describing the code structure, how to run the code to get your results, etc.).
 
 Here is an example of dilogue results:
