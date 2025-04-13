@@ -2,17 +2,17 @@ import os
 import json
 import numpy as np
 from tqdm import tqdm
-from openai import AsyncOpenAI
-import asyncio
+from openai import OpenAI
+from time import sleep
 from functools import lru_cache
-from tenacity import retry, stop_after_attempt, wait_random_exponential
 from nltk.translate.bleu_score import sentence_bleu, SmoothingFunction
 from nltk.translate.meteor_score import meteor_score
 from rouge_score import rouge_scorer
 
 # Set your OpenAI API key here or as an environment variable.
-os.environ["OPENAI_API_KEY"] =  ""
-client = AsyncOpenAI()
+client = OpenAI(
+    api_key="",
+)
 
 
 def load_json(file_path):
@@ -72,7 +72,7 @@ def distinct_n(texts, n):
     return len(unique_ngrams) / total_ngrams
 
 
-def vector_extrema_similarity(x, y, glove):
+def vector_extrema_similarity(x, y, glove_dict):
     """Calculates semantic similarity using GloVe vector extrema.
     
     Args:
@@ -83,33 +83,36 @@ def vector_extrema_similarity(x, y, glove):
     Returns:
         float: Cosine similarity score between vector extrema representations.
     """
-    def word2vec(x, glove):
-        x = x.split()[:-1]
-        x_words = []
-        for w in x:
-            for line in glove:
-                if w == line.split()[0]:
-                    x_words.append([float(f) for f in line[:-1].split()[1:]])
-                    break
-        return x_words
+    def word2vec(text, glove_dict):
+        words = text.split()
+        word_vectors = []
+        for w in words:
+            if w in glove_dict:
+                word_vectors.append(glove_dict[w])
+        return word_vectors
 
-    x, y = word2vec(x, glove), word2vec(y, glove)
-    if len(x) == 0 or len(y) == 0:
+    x_vecs, y_vecs = word2vec(x, glove_dict), word2vec(y, glove_dict)
+    if len(x_vecs) == 0 or len(y_vecs) == 0:
         return 0.0
-    x, y = np.max(np.array(x), axis=0), np.max(np.array(y), axis=0)
+    
+    x_extrema, y_extrema = np.max(np.array(x_vecs), axis=0), np.max(np.array(y_vecs), axis=0)
 
-    assert len(x) == len(y), "len(x) != len(y)"
-    zero_list = np.array([0 for _ in range(len(x))])
-    if x.all() == zero_list.all() or y.all() == zero_list.all():
-        return float(1) if x == y else float(0)
-    res = np.array([[x[i] * y[i], x[i] * x[i], y[i] * y[i]] for i in range(len(x))])
-    cos = sum(res[:, 0]) / (np.sqrt(sum(res[:, 1])) * np.sqrt(sum(res[:, 2])))
+    assert len(x_extrema) == len(y_extrema), "The dimensions of the two vectors do not match."
+    
+    zero_vector = np.zeros_like(x_extrema)
+    if np.array_equal(x_extrema, zero_vector) or np.array_equal(y_extrema, zero_vector):
+        return float(1) if np.array_equal(x_extrema, y_extrema) else float(0)
+    
+    dot_product = np.sum(x_extrema * y_extrema)
+    norm_x = np.sqrt(np.sum(x_extrema * x_extrema))
+    norm_y = np.sqrt(np.sum(y_extrema * y_extrema))
+    
+    cos = dot_product / (norm_x * norm_y)
     return cos
 
 
-@retry(stop=stop_after_attempt(3), wait=wait_random_exponential(multiplier=1, max=10))
-async def async_chatgpt_query(prompt):
-    """Asynchronous query to OpenAI ChatGPT for evaluation score.
+def chatgpt_query(prompt):
+    """Synchronous query to OpenAI ChatGPT for evaluation score.
 
     Args:
         prompt (str): Prompt text for evaluation.
@@ -117,7 +120,7 @@ async def async_chatgpt_query(prompt):
     Returns:
         str: Response from ChatGPT model.
     """
-    response = await client.chat.completions.create( 
+    response = client.chat.completions.create( 
         model="gpt-4o-mini",
         messages=[
             {"role": "system", "content": "Only return the numerical rating, no explanation."},
@@ -154,8 +157,8 @@ Score (1-5 only):
 """
 
 
-async def get_chatgpt_score_async(inputs, references, generateds):
-    """Asynchronously queries ChatGPT for evaluation scores.
+def get_chatgpt_score(inputs, references, generateds):
+    """Sequentially queries ChatGPT for evaluation scores with progress bar.
 
     Args:
         inputs (list): List of input texts.
@@ -164,16 +167,17 @@ async def get_chatgpt_score_async(inputs, references, generateds):
     Returns:
         list: List of evaluation scores for each generated text
     """
-    tasks = []
-    for inp, ref, gen in zip(inputs, references, generateds):
+    scores = []
+    for inp, ref, gen in tqdm(zip(inputs, references, generateds), total=len(inputs), desc="Calculating GPT-4 scores"):
         prompt = build_prompt(inp, ref, gen)
-        tasks.append(async_chatgpt_query(prompt))
+        raw_score = chatgpt_query(prompt)
+        sleep(0.5)
+        scores.append(min(max(float(raw_score), 1), 5) / 5)
     
-    raw_scores = await asyncio.gather(*tasks)
-    return [min(max(float(score), 1), 5) / 5 for score in raw_scores]
+    return scores
 
 
-def calculate_metrics(input_text, pred_text, ref_text, glove):
+def calculate_metrics(input_text, pred_text, ref_text, glove_dict):
     """Calculates multiple evaluation metrics for text generation.
     
     Args:
@@ -201,20 +205,17 @@ def calculate_metrics(input_text, pred_text, ref_text, glove):
     }
 
     print("Calculating GPT4 score...")
-    loop = asyncio.get_event_loop()
-    g_scores = loop.run_until_complete(
-        get_chatgpt_score_async(input_text, ref_text, pred_text)  
-    )
+    g_scores = get_chatgpt_score(input_text, ref_text, pred_text)
     metrics['g_score'] = np.mean(g_scores)
 
     print("GPT4 score calculated. Calculating other metrics...")
     rouge_scorer_obj = rouge_scorer.RougeScorer(['rougeL'], use_stemmer=True)
     smoothie = SmoothingFunction().method1
-    for ref, pred in tqdm(zip(ref_text, pred_text), total=len(ref_text), desc="Evaluating"):
+    for ref, pred in tqdm(zip(ref_text, pred_text), total=len(ref_text), desc="Calculating other metrics"):
         metrics["meteor"] += meteor_score([ref.split()], pred.split())
         metrics["bleu"] += sentence_bleu([ref.split()], pred.split(), weights=(0.25, 0.25, 0.25, 0.25), smoothing_function=smoothie)
         metrics["rouge"] += rouge_scorer_obj.score(ref, pred)['rougeL'].fmeasure
-        metrics["extrema"] += vector_extrema_similarity(pred, ref, glove)
+        metrics["extrema"] += vector_extrema_similarity(pred, ref, glove_dict)
     metrics["distinct_2"] = distinct_n(pred_text, 2)
     metrics["distinct_3"] = distinct_n(pred_text, 3)
     print("Metrics calculated.")
@@ -257,9 +258,15 @@ def main():
 
     # The file glove.6B.50d.txt can be downloaded from https://nlp.stanford.edu/projects/glove/.
     glove_path = "glove.6B.50d.txt"
+    glove_dict = {}
     with open(glove_path, 'r', encoding='utf-8') as f:
-        glove = f.readlines()
-    metrics = calculate_metrics(input_text, pred_text, ref_text, glove)
+        for line in tqdm(f, desc="Loading GloVe"):
+            parts = line.strip().split()
+            word = parts[0]
+            vector = [float(x) for x in parts[1:]]
+            glove_dict[word] = vector
+
+    metrics = calculate_metrics(input_text, pred_text, ref_text, glove_dict)
 
     weights = {
         'meteor': 0.2,
@@ -274,8 +281,8 @@ def main():
     
     print("\nValidation Results:")
     for metric, value in metrics.items():
-        print(f"{metric.upper()}: {value:.2f}")
-    print(f"\nTotal Score: {total_score:.2f}")
+        print(f"{metric.upper()}: {value:.4f}")
+    print(f"\nTotal Score: {total_score:.4f}")
     
 
 if __name__ == '__main__':
